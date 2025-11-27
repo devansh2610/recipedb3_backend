@@ -1,0 +1,34 @@
+const express = require("express");
+const router = express.Router();
+
+router.use("/recipesinfo", require("./recipes/recipesinfo"));
+router.use("/recipeofday", require("./recipes/recipeofday"));
+router.use("/nutritioninfo", require("./recipes/nutritioninfo"));
+router.use("/recipes/range", require("./recipes/recipes-range"));
+router.use("/recipes_cuisine/cuisine", require("./recipes/recipes-cuisine"));
+router.use("/recipeByTitle", require("./recipes/recipeByTitle"));
+router.use("/calories", require("./recipes/calories"));
+router.use("/recipes-by-carbs", require("./recipes/recipes-by-carbs"));
+router.use("/instructions", require("./recipes/instructions"));
+router.use("/byenergy/energy", require("./recipes/byenergy"));
+router.use("/by-ingredients-categories-title", require("./recipes/by-ingredients-categories-title"));
+router.use("/category", require("./recipes/category"));
+router.use("/search-recipe", require("./recipes/search-recipe"));
+router.use("/protein-range", require("./recipes/protein-range"));
+router.use("/facets", require("./recipes/facets"));
+router.use("/top-rated", require("./recipes/top-rated"));
+router.use("/random", require("./recipes/random"));
+router.use("/with-image", require("./recipes/with-image"));
+router.use("/similar", require("./recipes/similar"));
+router.use("/by-ingredients", require("./recipes/by-ingredients"));
+router.use("/micronutritioninfo", require("./recipes/micronutritioninfo"));
+router.use("/recipe-day/with-ingredients-categories", require("./recipes/recipe-day-with-ingredients-categories"));
+router.use("/region-diet", require("./recipes/region-diet"));
+router.use("/recipe-diet", require("./recipes/recipe-diet"));
+router.use("/meal-plan", require("./recipes/meal-plan"));
+router.use("/ingredients/flavor", require("./recipes/ingredients-flavor"));
+router.use("/byutensils", require("./recipes/byutensils"));
+router.use("/recipes-method", require("./recipes/recipes-method"));
+router.use("/recipe-Day-category", require("./recipes/recipe-day-category"));
+
+module.exports = router;
