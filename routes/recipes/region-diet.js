@@ -16,7 +16,8 @@ router.get("/", cacheRoute(60_000), async (req, res, next) => {
     if (!forbidCat.length && !forbidName.length) return res.status(400).json({ error: "unsupported diet" });
 
     const orConds = [];
-    forbidCat.forEach(r => orConds.push({ Dietrx_Category: { $regex: r } }));
+    // Iteration 2: Use Predicted_Category
+    forbidCat.forEach(r => orConds.push({ Predicted_Category: { $regex: r } }));
     forbidName.forEach(r => orConds.push({ NAME_lc: { $regex: r } }));
 
     const forbidden = await RecipeIngredient.aggregate([
@@ -25,7 +26,6 @@ router.get("/", cacheRoute(60_000), async (req, res, next) => {
     ]);
     const forbiddenSet = new Set(forbidden.map(x => x._id));
 
-    // Pull candidate ids (all recipes seen in ingredients list)
     const all = await RecipeIngredient.aggregate([{ $group: { _id: "$Recipe_ID" } }]);
     const okIds = all.map(x => x._id).filter(id => !forbiddenSet.has(id));
 

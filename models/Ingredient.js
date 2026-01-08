@@ -1,17 +1,15 @@
 const mongoose = require("mongoose");
 
 const IngredientSchema = new mongoose.Schema({
-  Ing_ID: { type: String, required: true, unique: true },  // 8-digit padded
+  Ing_ID: { type: String, required: true, unique: true },
   Ingredient: String,
   Frequency: Number,
-  generic_name: String,
-  wikilink: String,
-  wikiimage: String,
+  Generic_Name: String,
+  Wiki_Link: String,
+  Wiki_Image: String,
   FlavorDB_Category: String,
-  Dietrx_Category: String,
-  Flavor_DB_Link: String,
-  flavordb_id: String,
-  Diet_rx_link: String
+  FlavorDB_Link: String,
+  FlavorDB_ID: String
 }, { versionKey: false });
 
 module.exports = mongoose.model("Ingredient", IngredientSchema, "ingredients_lookup");

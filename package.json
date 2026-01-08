@@ -12,10 +12,11 @@
   "dependencies": {
     "compression": "^1.8.1",
     "csv-parser": "^3.2.0",
-    "dotenv": "^17.2.2",
+    "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "express-validator": "^7.2.1",
-    "mongoose": "^8.18.0",
+    "mongodb": "^7.0.0",
+    "mongoose": "^8.20.4",
     "p-limit": "^7.1.1"
   }
 }

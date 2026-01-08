@@ -15,19 +15,19 @@ router.get("/", cacheRoute(60_000), async (req, res, next) => {
     const { forbidCat, forbidName } = patternsForDiet(diet);
     if (!forbidCat.length && !forbidName.length) return res.status(400).json({ error: "unsupported diet" });
 
-    // Build OR over Dietrx_Category and NAME_lc, then remove any recipe having matches
+    // Iteration 2: Build OR over Predicted_Category (new diet field) and NAME_lc
     const orConds = [];
-    forbidCat.forEach(r => orConds.push({ Dietrx_Category: { $regex: r } }));
+    forbidCat.forEach(r => orConds.push({ Predicted_Category: { $regex: r } }));
     forbidName.forEach(r => orConds.push({ NAME_lc: { $regex: r } }));
 
-    // Get all forbidden recipe IDs (fast due to denormalized/indexed fields)
+    // Get all forbidden recipe IDs
     const forbidden = await RecipeIngredient.aggregate([
       { $match: { $or: orConds } },
       { $group: { _id: "$Recipe_ID" } }
     ]);
     const forbiddenSet = new Set(forbidden.map(x => x._id));
 
-    // Now get all recipe ids and subtract forbidden ones
+    // Get all recipe ids (from ingredients table) and subtract forbidden ones
     const okAgg = await RecipeIngredient.aggregate([
       { $group: { _id: "$Recipe_ID" } }
     ]);

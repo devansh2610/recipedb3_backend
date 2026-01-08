@@ -1,8 +1,6 @@
-// scripts/migrate-indexes.js
-// One-time (or re-runnable) migration:
-// - creates indexes
-// - lowercases shadow fields
-// - denormalizes FlavorDB_Category & Dietrx_Category onto recipe_ingredients
+// creates indexes
+// lowercases shadow fields
+// enormalizes FlavorDB_Category & Dietrx_Category onto recipe_ingredients
 
 require('dotenv').config();
 const mongoose = require('mongoose');

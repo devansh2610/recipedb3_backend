@@ -1,4 +1,3 @@
-// middleware/pagination.js
 // Fixed 7-items-per-page pagination helpers (no metadata in responses).
 
 function pageParams(req) {
