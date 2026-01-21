@@ -8,7 +8,7 @@ const RecipeIngredientSchema = new mongoose.Schema({
   QUANTITY: String,
   UNIT: String,
   STATE: String,
-  TEMP: String,               // NEW field
+  TEMP: String,               // New field
   DF: String,
   Ing_ID: String,
   

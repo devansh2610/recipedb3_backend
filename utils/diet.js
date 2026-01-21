@@ -1,13 +1,10 @@
-// utils/diet.js
-// Best-effort diet rules based on Ingredient.Dietrx_Category and NAME text.
-// Tweak patterns here later if your dataset uses different labels.
 const rx = (s) => new RegExp(s, "i");
 
 function patternsForDiet(diet) {
   const d = String(diet || "").toLowerCase();
 
   // Each entry is a regex applied to Dietrx_Category or NAME.
-  // "Forbidden" means: if ANY ingredient matches these, the recipe is excluded.
+  // "Forbidden" means that if any ingredient matches these, the recipe is excluded.
   switch (d) {
     case "vegan":
       return {
@@ -30,7 +27,7 @@ function patternsForDiet(diet) {
         forbidName: [rx("beef"), rx("pork"), rx("chicken"), rx("mutton"), rx("lamb")]
       };
     default:
-      // Unknown/empty diet → no restrictions (caller should validate)
+      // Unknown/empty diet -> no restrictions (caller should validate)
       return { forbidCat: [], forbidName: [] };
   }
 }
