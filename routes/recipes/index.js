@@ -1,0 +1,34 @@
+const express = require("express");
+const router = express.Router();
+
+router.use("/recipesinfo", require("./recipesinfo"));
+router.use("/recipeofday", require("./recipeofday"));
+router.use("/nutritioninfo", require("./nutritioninfo"));
+router.use("/recipes/range", require("./recipes-range"));
+router.use("/recipes_cuisine/cuisine", require("./recipes-cuisine"));
+router.use("/recipeByTitle", require("./recipeByTitle"));
+router.use("/calories", require("./calories"));
+router.use("/recipes-by-carbs", require("./recipes-by-carbs"));
+router.use("/instructions", require("./instructions"));
+router.use("/byenergy/energy", require("./byenergy"));
+router.use("/by-ingredients-categories-title", require("./by-ingredients-categories-title"));
+router.use("/category", require("./category"));
+router.use("/search-recipe", require("./search-recipe"));
+router.use("/protein-range", require("./protein-range"));
+router.use("/facets", require("./facets"));
+router.use("/top-rated", require("./top-rated"));
+router.use("/random", require("./random"));
+router.use("/with-image", require("./with-image"));
+router.use("/similar", require("./similar"));
+router.use("/by-ingredients", require("./by-ingredients"));
+router.use("/micronutritioninfo", require("./micronutritioninfo"));
+router.use("/recipe-day/with-ingredients-categories", require("./recipe-day-with-ingredients-categories"));
+router.use("/region-diet", require("./region-diet"));
+router.use("/recipe-diet", require("./recipe-diet"));
+router.use("/meal-plan", require("./meal-plan"));
+router.use("/ingredients/flavor", require("./ingredients-flavor"));
+router.use("/byutensils", require("./byutensils"));
+router.use("/recipes-method", require("./recipes-method"));
+router.use("/recipe-Day-category", require("./recipe-day-category"));
+
+module.exports = router;

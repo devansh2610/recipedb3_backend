@@ -1,7 +1,3 @@
-// middleware/cache.js
-// Simple in-process cache by request URL. Toggle per route with cacheRoute(ttlMs).
-// Suitable for read-mostly lists; disable if data changes every second.
-
 const store = new Map(); // key -> { expires, payload }
 
 function cacheRoute(ttlMs = 60_000) {

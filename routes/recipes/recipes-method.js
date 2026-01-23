@@ -10,8 +10,9 @@ router.get("/:method", cacheRoute(60_000), async (req, res, next) => {
   try {
     const method = (req.params.method || "").toLowerCase();
 
+    // Iteration 2: Use ACTION_lc (migrated from ACTION column)
     const idsAgg = await RecipeInstruction.aggregate([
-      { $match: { COOKING_INSTRUCTION_lc: { $regex: method } } },
+      { $match: { ACTION_lc: { $regex: method } } },
       { $group: { _id: "$Recipe_ID", n: { $sum: 1 } } },
       { $sort: { n: -1, _id: 1 } }
     ]);

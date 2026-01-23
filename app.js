@@ -1,14 +1,14 @@
-// index.js
-
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
-const compression = require('compression');          // gzip responses
-const recipeRoutes = require('./routes/recipes');    // Import the recipes routes
+const compression = require('compression'); // gzip responses
+const recipeRoutes = require('./routes/recipes');
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./api-docs.json');
 
 const app = express();
 app.use(express.json());
-app.use(compression());                              // enable gzip (i am using this for lesser latency, do further optimisations as needed, currently all under 500ms)
+app.use(compression()); // enable gzip (i am using this for lesser latency, do further optimisations as needed, currently all under 500ms)
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI, {
@@ -21,12 +21,21 @@ mongoose.connect(process.env.MONGODB_URI, {
     process.exit(1);
   });
 
+// Swagger Routes
+// 1. Serve the UI
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+// 2. Serve the raw JSON (api-docs.json)
+app.get('/api-docs.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(swaggerSpec);
+});
+
 // Use routes
 app.use('/api/recipes', recipeRoutes);
 
 // Test route
 app.get('/', (req, res) => {
-  res.send('Node.js is working.');
+  res.send('Connected to server. Please navigate to /api/docs for documentation.');
 });
 
 // Global error handler

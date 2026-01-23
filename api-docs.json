@@ -1,0 +1,399 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "RecipeDB 3.0 API Endpoints Testing Playground",
+    "description": "API Documentation for RecipeDB 3.0 Backend.\n\n**Important Rule**: All IDs (Recipe_ID, Ing_ID) are 8-digit zero-padded strings. Inputting '1' is automatically treated as '00000001'.",
+    "version": "2.0.0",
+    "contact": {
+            "name": "RecipeDB Team",
+            "email": "bagler@iiitd.ac.in"
+        }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000/api/recipes",
+      "description": "Local Development Server"
+    }
+  ],
+  "tags": [
+    { "name": "General Discovery" },
+    { "name": "Search & Lookup" },
+    { "name": "Diet & Nutrition" },
+    { "name": "Ingredients & Methods" }
+  ],
+  "paths": {
+    "/recipesinfo": {
+      "get": {
+        "tags": ["General Discovery"],
+        "summary": "Get All Recipes (Info)",
+        "parameters": [
+          { "name": "page", "in": "query", "schema": { "type": "integer" }, "description": "Page number (7 items per page)", "example": 1 },
+          { "name": "cuisine", "in": "query", "schema": { "type": "string" }, "example": "Indian" },
+          { "name": "category", "in": "query", "schema": { "type": "string" }, "example": "Lunch" }
+        ],
+        "responses": {
+          "200": { "description": "A list of recipes" }
+        }
+      }
+    },
+    "/top-rated": {
+      "get": {
+        "tags": ["General Discovery"],
+        "summary": "Top Rated Recipes",
+        "parameters": [
+          { "name": "page", "in": "query", "schema": { "type": "integer" }, "example": 1 }
+        ],
+        "responses": {
+          "200": { "description": "List of top-rated recipes" }
+        }
+      }
+    },
+    "/with-image": {
+      "get": {
+        "tags": ["General Discovery"],
+        "summary": "Filter: With Images Only",
+        "parameters": [
+          { "name": "has", "in": "query", "schema": { "type": "string" }, "example": "true", "description": "true/false" },
+          { "name": "page", "in": "query", "schema": { "type": "integer" }, "example": 1 }
+        ],
+        "responses": {
+          "200": { "description": "List of recipes with images" }
+        }
+      }
+    },
+    "/recipeofday": {
+      "get": {
+        "tags": ["General Discovery"],
+        "summary": "Recipe of the Day",
+        "responses": {
+          "200": { "description": "Single recipe object" }
+        }
+      }
+    },
+    "/recipe-Day-category": {
+      "get": {
+        "tags": ["General Discovery"],
+        "summary": "Recipe of the Day (Category)",
+        "parameters": [
+          { "name": "category", "in": "query", "required": true, "schema": { "type": "string" }, "example": "Dessert" }
+        ],
+        "responses": {
+          "200": { "description": "Single recipe object filtered by category" }
+        }
+      }
+    },
+    "/random": {
+      "get": {
+        "tags": ["General Discovery"],
+        "summary": "Random Recipes",
+        "responses": {
+          "200": { "description": "A list of 7 random recipes" }
+        }
+      }
+    },
+    "/facets": {
+      "get": {
+        "tags": ["General Discovery"],
+        "summary": "Facets (Stats)",
+        "responses": {
+          "200": { "description": "Statistical counts for Cuisines and Categories" }
+        }
+      }
+    },
+    "/category": {
+      "get": {
+        "tags": ["General Discovery"],
+        "summary": "Filter by Category",
+        "parameters": [
+          { "name": "category", "in": "query", "required": true, "schema": { "type": "string" }, "example": "Main Dish" },
+          { "name": "page", "in": "query", "schema": { "type": "integer" }, "example": 1 }
+        ],
+        "responses": {
+          "200": { "description": "List of recipes in category" }
+        }
+      }
+    },
+    "/recipes_cuisine/cuisine/{region}": {
+      "get": {
+        "tags": ["General Discovery"],
+        "summary": "Filter by Cuisine",
+        "parameters": [
+          { "name": "region", "in": "path", "required": true, "schema": { "type": "string" }, "example": "Indian" },
+          { "name": "page", "in": "query", "schema": { "type": "integer" }, "example": 1 }
+        ],
+        "responses": {
+          "200": { "description": "List of recipes for region" }
+        }
+      }
+    },
+    "/search-recipe/{id}": {
+      "get": {
+        "tags": ["Search & Lookup"],
+        "summary": "Search by ID",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "description": "8-digit Recipe ID", "schema": { "type": "string" }, "example": "00000001" }
+        ],
+        "responses": {
+          "200": { "description": "Detailed recipe object" },
+          "404": { "description": "Recipe not found" }
+        }
+      }
+    },
+    "/similar/{id}": {
+      "get": {
+        "tags": ["Search & Lookup"],
+        "summary": "Find Similar Recipes",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" }, "example": "00000001" },
+          { "name": "page", "in": "query", "schema": { "type": "integer" }, "example": 1 }
+        ],
+        "responses": {
+          "200": { "description": "List of similar recipes" }
+        }
+      }
+    },
+    "/recipeByTitle": {
+      "get": {
+        "tags": ["Search & Lookup"],
+        "summary": "Search by Title",
+        "parameters": [
+          { "name": "title", "in": "query", "schema": { "type": "string" }, "example": "chicken" },
+          { "name": "page", "in": "query", "schema": { "type": "integer" }, "example": 1 }
+        ],
+        "responses": {
+          "200": { "description": "List of matching recipes" }
+        }
+      }
+    },
+    "/by-ingredients-categories-title": {
+      "get": {
+        "tags": ["Search & Lookup"],
+        "summary": "Mega Filter (Ingredients+Diet+Title)",
+        "parameters": [
+          { "name": "includeDiet", "in": "query", "schema": { "type": "string" }, "description": "Matches Predicted_Category", "example": "Vegetable" },
+          { "name": "title", "in": "query", "schema": { "type": "string" }, "example": "soup" },
+          { "name": "includeFlavor", "in": "query", "schema": { "type": "string" } },
+          { "name": "excludeFlavor", "in": "query", "schema": { "type": "string" } },
+          { "name": "category", "in": "query", "schema": { "type": "string" } },
+          { "name": "page", "in": "query", "schema": { "type": "integer" }, "example": 1 }
+        ],
+        "responses": {
+          "200": { "description": "List of recipes matching criteria" }
+        }
+      }
+    },
+    "/meal-plan": {
+      "get": {
+        "tags": ["Diet & Nutrition"],
+        "summary": "Meal Plan",
+        "parameters": [
+          { "name": "target_calories", "in": "query", "schema": { "type": "integer" }, "example": 2000 },
+          { "name": "meals", "in": "query", "schema": { "type": "integer" }, "example": 3 },
+          { "name": "cuisine", "in": "query", "schema": { "type": "string" }, "example": "Indian" }
+        ],
+        "responses": {
+          "200": { "description": "Generated meal plan with totals" }
+        }
+      }
+    },
+    "/recipe-diet": {
+      "get": {
+        "tags": ["Diet & Nutrition"],
+        "summary": "Filter by Diet (Vegan/Veg)",
+        "parameters": [
+          { "name": "diet", "in": "query", "required": true, "schema": { "type": "string", "enum": ["vegan", "vegetarian", "eggetarian", "pescatarian"] }, "example": "vegan" },
+          { "name": "page", "in": "query", "schema": { "type": "integer" }, "example": 1 }
+        ],
+        "responses": {
+          "200": { "description": "List of diet-compliant recipes" }
+        }
+      }
+    },
+    "/region-diet": {
+      "get": {
+        "tags": ["Diet & Nutrition"],
+        "summary": "Region + Diet Filter",
+        "parameters": [
+          { "name": "region", "in": "query", "required": true, "schema": { "type": "string" }, "example": "Indian" },
+          { "name": "diet", "in": "query", "required": true, "schema": { "type": "string", "enum": ["vegan", "vegetarian", "eggetarian", "pescatarian"] }, "example": "vegetarian" },
+          { "name": "page", "in": "query", "schema": { "type": "integer" }, "example": 1 }
+        ],
+        "responses": {
+          "200": { "description": "List of recipes" }
+        }
+      }
+    },
+    "/recipe-day/with-ingredients-categories": {
+      "get": {
+        "tags": ["Diet & Nutrition"],
+        "summary": "Recipe of Day (Filtered)",
+        "parameters": [
+          { "name": "includeDiet", "in": "query", "schema": { "type": "string" }, "example": "Vegetable" },
+          { "name": "includeFlavor", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Single filtered recipe" }
+        }
+      }
+    },
+    "/nutritioninfo/{id}": {
+      "get": {
+        "tags": ["Diet & Nutrition"],
+        "summary": "Nutrition Info",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "description": "8-digit Recipe ID", "schema": { "type": "string" }, "example": "00000001" }
+        ],
+        "responses": {
+          "200": { "description": "Nutrition object only" }
+        }
+      }
+    },
+    "/micronutritioninfo/{id}": {
+      "get": {
+        "tags": ["Diet & Nutrition"],
+        "summary": "Micro-Nutrition Info",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "description": "8-digit Recipe ID", "schema": { "type": "string" }, "example": "00000001" }
+        ],
+        "responses": {
+          "200": { "description": "Micro-nutrition object (Sodium, Sugar, etc.)" }
+        }
+      }
+    },
+    "/calories": {
+      "get": {
+        "tags": ["Diet & Nutrition"],
+        "summary": "Filter by Calories (Sort: Calories)",
+        "parameters": [
+          { "name": "min", "in": "query", "schema": { "type": "integer" }, "example": 100 },
+          { "name": "max", "in": "query", "schema": { "type": "integer" }, "example": 500 },
+          { "name": "page", "in": "query", "schema": { "type": "integer" }, "example": 1 }
+        ],
+        "responses": {
+          "200": { "description": "List of recipes sorted by calories" }
+        }
+      }
+    },
+    "/byenergy/energy": {
+      "get": {
+        "tags": ["Diet & Nutrition"],
+        "summary": "Filter by Energy (Sort: Popularity)",
+        "parameters": [
+          { "name": "min", "in": "query", "schema": { "type": "integer" }, "example": 100 },
+          { "name": "max", "in": "query", "schema": { "type": "integer" }, "example": 500 },
+          { "name": "page", "in": "query", "schema": { "type": "integer" }, "example": 1 }
+        ],
+        "responses": {
+          "200": { "description": "List of recipes sorted by rating" }
+        }
+      }
+    },
+    "/recipes-by-carbs": {
+      "get": {
+        "tags": ["Diet & Nutrition"],
+        "summary": "Filter by Carbs",
+        "parameters": [
+          { "name": "min", "in": "query", "schema": { "type": "integer" }, "example": 10 },
+          { "name": "max", "in": "query", "schema": { "type": "integer" }, "example": 100 },
+          { "name": "page", "in": "query", "schema": { "type": "integer" }, "example": 1 }
+        ],
+        "responses": {
+          "200": { "description": "List of recipes sorted by rating" }
+        }
+      }
+    },
+    "/protein-range": {
+      "get": {
+        "tags": ["Diet & Nutrition"],
+        "summary": "Filter by Protein",
+        "parameters": [
+          { "name": "min", "in": "query", "schema": { "type": "integer" }, "example": 10 },
+          { "name": "max", "in": "query", "schema": { "type": "integer" }, "example": 100 },
+          { "name": "page", "in": "query", "schema": { "type": "integer" }, "example": 1 }
+        ],
+        "responses": {
+          "200": { "description": "List of recipes sorted by rating" }
+        }
+      }
+    },
+    "/recipes/range": {
+      "get": {
+        "tags": ["Diet & Nutrition"],
+        "summary": "Combo Range (Calories + Protein)",
+        "parameters": [
+          { "name": "calories_min", "in": "query", "schema": { "type": "integer" } },
+          { "name": "calories_max", "in": "query", "schema": { "type": "integer" } },
+          { "name": "protein_min", "in": "query", "schema": { "type": "integer" } },
+          { "name": "protein_max", "in": "query", "schema": { "type": "integer" } },
+          { "name": "page", "in": "query", "schema": { "type": "integer" }, "example": 1 }
+        ],
+        "responses": {
+          "200": { "description": "List of recipes matching ranges" }
+        }
+      }
+    },
+    "/by-ingredients": {
+      "get": {
+        "tags": ["Ingredients & Methods"],
+        "summary": "Filter by Ingredients",
+        "parameters": [
+          { "name": "include", "in": "query", "schema": { "type": "string" }, "description": "Comma-separated list", "example": "onion,garlic" },
+          { "name": "exclude", "in": "query", "schema": { "type": "string" }, "example": "beef" }
+        ],
+        "responses": {
+          "200": { "description": "List of recipes" }
+        }
+      }
+    },
+    "/ingredients/flavor/{flavor}": {
+      "get": {
+        "tags": ["Ingredients & Methods"],
+        "summary": "Filter by Flavor Category",
+        "parameters": [
+          { "name": "flavor", "in": "path", "required": true, "schema": { "type": "string" }, "example": "Spice" },
+          { "name": "page", "in": "query", "schema": { "type": "integer" }, "example": 1 }
+        ],
+        "responses": {
+          "200": { "description": "List of recipes containing flavor" }
+        }
+      }
+    },
+    "/byutensils/utensils": {
+      "get": {
+        "tags": ["Ingredients & Methods"],
+        "summary": "Filter by Utensil",
+        "parameters": [
+          { "name": "utensils", "in": "query", "required": true, "schema": { "type": "string" }, "example": "pan,wok" }
+        ],
+        "responses": {
+          "200": { "description": "List of recipes using specified utensils" }
+        }
+      }
+    },
+    "/recipes-method/{method}": {
+      "get": {
+        "tags": ["Ingredients & Methods"],
+        "summary": "Filter by Cooking Method",
+        "parameters": [
+          { "name": "method", "in": "path", "required": true, "schema": { "type": "string" }, "example": "fry" },
+          { "name": "page", "in": "query", "schema": { "type": "integer" }, "example": 1 }
+        ],
+        "responses": {
+          "200": { "description": "List of recipes" }
+        }
+      }
+    },
+    "/instructions/{id}": {
+      "get": {
+        "tags": ["Ingredients & Methods"],
+        "summary": "Get Instructions",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "description": "8-digit Recipe ID", "schema": { "type": "string" }, "example": "00000001" }
+        ],
+        "responses": {
+          "200": { "description": "Array of detailed instruction steps" }
+        }
+      }
+    }
+  }
+}

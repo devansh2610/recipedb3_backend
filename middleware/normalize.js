@@ -1,5 +1,4 @@
-// middleware/normalize.js
-const { pad8 } = require("../utils");   // use shared helper
+const { pad8 } = require("../utils");
 
 function parseList(s) {
   if (!s) return [];

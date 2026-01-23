@@ -4,7 +4,7 @@ const Recipe = require("../../models/Recipe");
 const RecipeIngredient = require("../../models/RecipeIngredient");
 const { cacheRoute } = require("../../middleware/cache");
 
-// GET /recipe-day/with-ingredients-categories?includeFlavor=Spices&includeDiet=vegetarian
+// GET /recipe-day/with-ingredients-categories
 router.get("/", cacheRoute(86_400_000 /* 24h */), async (req, res, next) => {
   try {
     const includeFlavor = (req.query.includeFlavor || "").split(",").map(s => s.trim()).filter(Boolean);
@@ -14,13 +14,14 @@ router.get("/", cacheRoute(86_400_000 /* 24h */), async (req, res, next) => {
 
     const toRegs = arr => arr.map(v => new RegExp(v, "i"));
 
+    // Iteration 2: Predicted_Category
     const incOr = [];
     if (includeFlavor.length) incOr.push({ FlavorDB_Category: { $in: toRegs(includeFlavor) } });
-    if (includeDiet.length)   incOr.push({ Dietrx_Category:   { $in: toRegs(includeDiet)   } });
+    if (includeDiet.length)   incOr.push({ Predicted_Category: { $in: toRegs(includeDiet)   } });
 
     const excNor = [];
     if (excludeFlavor.length) excNor.push({ FlavorDB_Category: { $in: toRegs(excludeFlavor) } });
-    if (excludeDiet.length)   excNor.push({ Dietrx_Category:   { $in: toRegs(excludeDiet)   } });
+    if (excludeDiet.length)   excNor.push({ Predicted_Category: { $in: toRegs(excludeDiet)   } });
 
     // Stage 1: candidates by includes
     const pipe = [];
@@ -34,7 +35,7 @@ router.get("/", cacheRoute(86_400_000 /* 24h */), async (req, res, next) => {
         { $unwind: "$ings" },
         { $match: { $nor: excNor.map(cond => ({ 
           ...(cond.FlavorDB_Category ? { "ings.FlavorDB_Category": cond.FlavorDB_Category } : {}),
-          ...(cond.Dietrx_Category   ? { "ings.Dietrx_Category":   cond.Dietrx_Category   } : {})
+          ...(cond.Predicted_Category ? { "ings.Predicted_Category": cond.Predicted_Category } : {})
         })) } },
         { $group: { _id: "$_id" } }
       );
@@ -46,7 +47,6 @@ router.get("/", cacheRoute(86_400_000 /* 24h */), async (req, res, next) => {
     const today = new Date().toISOString().slice(0, 10);
     if (!ids.length) return res.json({ date: today, recipe: null });
 
-    // Deterministic pick for the day
     const idx = parseInt(today.replace(/-/g, ""), 10) % ids.length;
     const recipe = await Recipe.findOne({ Recipe_ID: ids[idx] })
       .select({
