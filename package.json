@@ -18,6 +18,7 @@
   "author": "bagler@iiitd.ac.in",
   "license": "ISC",
   "dependencies": {
+    "axios": "^1.13.2",
     "compression": "^1.8.1",
     "csv-parser": "^3.2.0",
     "dotenv": "^17.2.3",
