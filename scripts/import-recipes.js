@@ -43,9 +43,12 @@ async function importGeneral() {
         Source: data.Source,
         Image_ID: pad8(data.Image_ID),
         Image_URL: data.Image_URL,
-        Prep_Time: data.Prep_Time,
-        Cook_Time: data.Cook_Time,
-        Total_Time: data.Total_Time,
+        
+        // CHANGED: Parse strings to Integers. Default to 0 if missing.
+        Prep_Time: parseInt(data.Prep_Time, 10) || 0,
+        Cook_Time: parseInt(data.Cook_Time, 10) || 0,
+        Total_Time: parseInt(data.Total_Time, 10) || 0,
+        
         Instructions: data.Instructions,
         Cuisine: data.Cuisine,
         Category: data.Category,
