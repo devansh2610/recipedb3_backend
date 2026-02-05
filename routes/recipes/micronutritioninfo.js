@@ -1,10 +1,10 @@
 const express = require("express");
 const router = express.Router();
 const Recipe = require("../../models/Recipe");
+const { normalize } = require("../../middleware/normalize");
 
-// GET /micronutritioninfo/:id
-// Exposes the micro-like fields available in Nutrition.csv for this dataset.
-router.get("/:id", async (req, res, next) => {
+// Exposes the micro-like fields available in Nutrition.csv
+router.get("/:id", normalize, async (req, res, next) => {
   try {
     const doc = await Recipe.findOne(
       { Recipe_ID: req.params.id },

@@ -15,23 +15,34 @@ router.get("/", cacheRoute(60_000), async (req, res, next) => {
     const { forbidCat, forbidName } = patternsForDiet(diet);
     if (!forbidCat.length && !forbidName.length) return res.status(400).json({ error: "unsupported diet" });
 
+    // exclude forbidden ingredients
     const orConds = [];
     // Iteration 2: Use Predicted_Category
     forbidCat.forEach(r => orConds.push({ Predicted_Category: { $regex: r } }));
     forbidName.forEach(r => orConds.push({ NAME_lc: { $regex: r } }));
 
-    const forbidden = await RecipeIngredient.aggregate([
+    const badIngredientRecipes = await RecipeIngredient.aggregate([
       { $match: { $or: orConds } },
       { $group: { _id: "$Recipe_ID" } }
     ]);
-    const forbiddenSet = new Set(forbidden.map(x => x._id));
 
-    const all = await RecipeIngredient.aggregate([{ $group: { _id: "$Recipe_ID" } }]);
-    const okIds = all.map(x => x._id).filter(id => !forbiddenSet.has(id));
+    // exlcude forbidden titles
+    const titleConds = [];
+    forbidName.forEach(r => titleConds.push({ Recipe_Title: { $regex: r } }));
+    
+    const badTitleRecipes = await Recipe.find({ $or: titleConds }).select("Recipe_ID").lean();
+
+    // combine and exclude
+    const forbiddenSet = new Set([
+        ...badIngredientRecipes.map(x => x._id),
+        ...badTitleRecipes.map(x => x.Recipe_ID)
+    ]);
 
     const { skip, limit } = pageParams(req);
+
+    // Query: (Matches Region) AND (Not Forbidden)
     const items = await Recipe.find({
-      Recipe_ID: { $in: okIds },
+      Recipe_ID: { $nin: Array.from(forbiddenSet) },
       Cuisine: new RegExp(region, "i")
     })
       .sort({ Ratings_Count: -1, Ratings: -1 })

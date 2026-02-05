@@ -11,7 +11,7 @@
   },
   "servers": [
     {
-      "url": "http://localhost:3000/api/recipes",
+      "url": "http://localhost:3033/api/recipes",
       "description": "Local Development Server"
     }
   ],

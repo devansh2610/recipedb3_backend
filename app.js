@@ -2,11 +2,13 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const compression = require('compression'); // gzip responses
+const cors = require('cors');
 const recipeRoutes = require('./routes/recipes');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./api-docs.json');
 
 const app = express();
+app.use(cors());
 app.use(express.json());
 app.use(compression()); // enable gzip (i am using this for lesser latency, do further optimisations as needed, currently all under 500ms)
 

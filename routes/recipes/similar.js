@@ -2,8 +2,9 @@ const express = require("express");
 const router = express.Router();
 const Recipe = require("../../models/Recipe");
 const { pageParams } = require("../../middleware/pagination");
+const { normalize } = require("../../middleware/normalize");
 
-router.get("/:id", async (req, res, next) => {
+router.get("/:id", normalize, async (req, res, next) => {
   try {
     const base = await Recipe.findOne({ Recipe_ID: req.params.id }).lean();
     if (!base) return res.status(404).json({ error: "Not found" });

@@ -6,7 +6,6 @@ const { patternsForDiet } = require("../../utils/diet");
 const { pageParams } = require("../../middleware/pagination");
 const { cacheRoute } = require("../../middleware/cache");
 
-// GET /recipe-diet?diet=vegan&page=1
 router.get("/", cacheRoute(60_000), async (req, res, next) => {
   try {
     const { diet } = req.query;
@@ -16,25 +15,34 @@ router.get("/", cacheRoute(60_000), async (req, res, next) => {
     if (!forbidCat.length && !forbidName.length) return res.status(400).json({ error: "unsupported diet" });
 
     // Iteration 2: Build OR over Predicted_Category (new diet field) and NAME_lc
+    // We check Predicted_Category (e.g. "Meat") and Ingredient Name (e.g. "Bacon")
     const orConds = [];
     forbidCat.forEach(r => orConds.push({ Predicted_Category: { $regex: r } }));
     forbidName.forEach(r => orConds.push({ NAME_lc: { $regex: r } }));
 
-    // Get all forbidden recipe IDs
-    const forbidden = await RecipeIngredient.aggregate([
+    // Get IDs of recipes with bad ingredients
+    const badIngredientRecipes = await RecipeIngredient.aggregate([
       { $match: { $or: orConds } },
       { $group: { _id: "$Recipe_ID" } }
     ]);
-    const forbiddenSet = new Set(forbidden.map(x => x._id));
+    
+    // Also checking title here (for safety) -> If the title says "Beef Stir Fry", we block it immediately even if ingredients are vague.
+    const titleConds = [];
+    forbidName.forEach(r => titleConds.push({ Recipe_Title: { $regex: r } }));
+    
+    // Use .lean() and select only ID for performance
+    const badTitleRecipes = await Recipe.find({ $or: titleConds }).select("Recipe_ID").lean();
 
-    // Get all recipe ids (from ingredients table) and subtract forbidden ones
-    const okAgg = await RecipeIngredient.aggregate([
-      { $group: { _id: "$Recipe_ID" } }
+    // combine and exclude
+    const forbiddenSet = new Set([
+        ...badIngredientRecipes.map(x => x._id),
+        ...badTitleRecipes.map(x => x.Recipe_ID)
     ]);
-    const okIds = okAgg.map(x => x._id).filter(id => !forbiddenSet.has(id));
 
     const { skip, limit } = pageParams(req);
-    const items = await Recipe.find({ Recipe_ID: { $in: okIds } })
+
+    // Return only recipes NOT in the forbidden set
+    const items = await Recipe.find({ Recipe_ID: { $nin: Array.from(forbiddenSet) } })
       .sort({ Ratings_Count: -1, Ratings: -1 })
       .skip(skip)
       .limit(limit)
