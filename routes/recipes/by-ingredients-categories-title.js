@@ -4,6 +4,7 @@ const Recipe = require("../../models/Recipe");
 const RecipeIngredient = require("../../models/RecipeIngredient");
 const { pageParams } = require("../../middleware/pagination");
 const { cacheRoute } = require("../../middleware/cache");
+const { patternsForDiet } = require("../../utils/diet");
 
 // GET /by-ingredients-categories-title
 router.get("/", cacheRoute(60_000), async (req, res, next) => {
@@ -11,54 +12,103 @@ router.get("/", cacheRoute(60_000), async (req, res, next) => {
     const includeFlavor = (req.query.includeFlavor || "").split(",").map(s => s.trim()).filter(Boolean);
     const excludeFlavor = (req.query.excludeFlavor || "").split(",").map(s => s.trim()).filter(Boolean);
     const includeDiet   = (req.query.includeDiet   || "").split(",").map(s => s.trim()).filter(Boolean);
-    const excludeDiet   = (req.query.excludeDiet   || "").split(",").map(s => s.trim()).filter(Boolean);
     const includeIngredient = (req.query.includeIngredient || "").split(",").map(s => s.trim()).filter(Boolean);
     const excludeIngredient = (req.query.excludeIngredient || "").split(",").map(s => s.trim()).filter(Boolean);
+    
     const recipeCategory = req.query.category;
-    const titleQuery     = (req.query.title || "").toLowerCase().trim();
+    const titleQuery     = (req.query.title || "").trim();
     const cuisineQuery   = req.query.cuisine;
 
-    const incOr = [];
-    if (includeFlavor.length) incOr.push({ FlavorDB_Category: { $in: includeFlavor.map(v => new RegExp(v, "i")) } });
-    if (includeDiet.length)   incOr.push({ Predicted_Category: { $in: includeDiet.map(v => new RegExp(v, "i")) } });
-    if (includeIngredient.length) incOr.push({ NAME_lc: { $in: includeIngredient.map(v => new RegExp(v, "i")) } });
-
-    const excNor = [];
-    if (excludeFlavor.length) excNor.push({ FlavorDB_Category: { $in: excludeFlavor.map(v => new RegExp(v, "i")) } });
-    if (excludeDiet.length)   excNor.push({ Predicted_Category: { $in: excludeDiet.map(v => new RegExp(v, "i")) } });
-    if (excludeIngredient.length) excNor.push({ NAME_lc: { $in: excludeIngredient.map(v => new RegExp(v, "i")) } });
-
-    const pipe = [];
-    if (incOr.length) pipe.push({ $match: { $or: incOr } });
-    pipe.push({ $group: { _id: "$Recipe_ID" } });
-
-    if (excNor.length) {
-      pipe.push(
-        { $lookup: { from: "recipe_ingredients", localField: "_id", foreignField: "Recipe_ID", as: "ings" } },
-        { $unwind: "$ings" },
-        { $match: { $nor: excNor.map(cond => ({ 
-          ...(cond.FlavorDB_Category ? { "ings.FlavorDB_Category": cond.FlavorDB_Category } : {}),
-          ...(cond.Predicted_Category ? { "ings.Predicted_Category": cond.Predicted_Category } : {}),
-          ...(cond.NAME_lc ? { "ings.NAME_lc": cond.NAME_lc } : {})
-        })) } },
-        { $group: { _id: "$_id" } }
-      );
+    // INPUT VALIDATION
+    const validDiets = ["vegan", "vegetarian", "eggetarian", "pescatarian"];
+    for (const d of includeDiet) {
+        if (!validDiets.includes(d.toLowerCase())) {
+            return res.status(400).json({ 
+                error: `Invalid diet parameter: '${d}'. Valid options are: vegan, vegetarian, eggetarian, pescatarian.` 
+            });
+        }
     }
 
-    const matches = await RecipeIngredient.aggregate(pipe);
-    const ids = matches.map(m => m._id);
-    if (!ids.length && (incOr.length || excNor.length)) return res.json([]); 
+    // BUILD EXCLUSIONS (The Strict Blocklist)
+    const excludeConditions = [];
+    let forbidCat = [];
+    let forbidName = [];
 
-    const query = {};
-    if (incOr.length || excNor.length) {
-        query.Recipe_ID = { $in: ids };
+    // Apply utils/diet.js rules for False-Positive prevention
+    for (const diet of includeDiet) {
+        const rules = patternsForDiet(diet);
+        if (rules.forbidCat) forbidCat.push(...rules.forbidCat);
+        if (rules.forbidName) forbidName.push(...rules.forbidName);
     }
     
+    // Apply explicit user exclusions to the forbidName array
+    if (excludeIngredient.length > 0) {
+        forbidName.push(...excludeIngredient.map(v => new RegExp(v, "i")));
+    }
+
+    // Push conditions for querying the RecipeIngredients collection
+    if (forbidCat.length > 0) excludeConditions.push({ Predicted_Category: { $in: forbidCat } });
+    if (forbidName.length > 0) excludeConditions.push({ NAME_lc: { $in: forbidName } });
+    if (excludeFlavor.length > 0) {
+        excludeConditions.push({ FlavorDB_Category: { $in: excludeFlavor.map(v => new RegExp(v, "i")) } });
+    }
+
+    let forbiddenRecipeIds = [];
+    if (excludeConditions.length > 0) {
+        // Find ALL recipe IDs that contain AT LEAST ONE forbidden ingredient/category
+        forbiddenRecipeIds = await RecipeIngredient.distinct("Recipe_ID", { $or: excludeConditions });
+    }
+
+    // BUILD INCLUSIONS (The Require List)
+    let requiredRecipeIds = null; 
+
+    async function intersectIds(query) {
+        const ids = await RecipeIngredient.distinct("Recipe_ID", query);
+        if (requiredRecipeIds === null) {
+            requiredRecipeIds = ids;
+        } else {
+            const idSet = new Set(ids);
+            requiredRecipeIds = requiredRecipeIds.filter(id => idSet.has(id));
+        }
+    }
+
+    for (const ing of includeIngredient) {
+        await intersectIds({ NAME_lc: new RegExp(ing, "i") });
+    }
+    for (const flav of includeFlavor) {
+        await intersectIds({ FlavorDB_Category: new RegExp(flav, "i") });
+    }
+
+    if (requiredRecipeIds !== null && requiredRecipeIds.length === 0) {
+        return res.json([]); 
+    }
+
+    // FINAL RECIPE QUERY
+    const query = {};
+
+    // Apply the ID filters
+    if (forbiddenRecipeIds.length > 0 || requiredRecipeIds !== null) {
+        query.Recipe_ID = {};
+        if (requiredRecipeIds !== null) query.Recipe_ID.$in = requiredRecipeIds;
+        if (forbiddenRecipeIds.length > 0) query.Recipe_ID.$nin = forbiddenRecipeIds;
+    }
+
+    // Apply the direct string filters
     if (recipeCategory) query.Category = new RegExp(recipeCategory, "i");
-    if (titleQuery)     query.Recipe_Title_lc = { $regex: titleQuery };
+    if (titleQuery)     query.Recipe_Title = new RegExp(titleQuery, "i");
     if (cuisineQuery)   query.Cuisine = new RegExp(cuisineQuery, "i");
 
+    // Comprehensive Title and Category Block Strategy
+    // Combines BOTH explicit names (e.g., "beef") and categories (e.g., "meat")
+    const allForbiddenRegexes = [...forbidName, ...forbidCat];
+    if (allForbiddenRegexes.length > 0) {
+        if (!query.$and) query.$and = [];
+        query.$and.push({ Recipe_Title: { $nin: allForbiddenRegexes } });
+        query.$and.push({ Category: { $nin: allForbiddenRegexes } });
+    }
+
     const { skip, limit } = pageParams(req);
+    
     const items = await Recipe.find(query)
       .sort({ Ratings_Count: -1, Ratings: -1, _id: 1 })
       .skip(skip).limit(limit)
@@ -69,7 +119,9 @@ router.get("/", cacheRoute(60_000), async (req, res, next) => {
       .lean();
 
     res.json(items);
-  } catch (e) { next(e); }
+  } catch (e) { 
+    next(e); 
+  }
 });
 
 module.exports = router;
