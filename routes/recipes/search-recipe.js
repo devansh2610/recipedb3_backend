@@ -1,14 +1,21 @@
 const express = require("express");
 const router = express.Router();
 const Recipe = require("../../models/Recipe");
-const { normalize } = require("../../middleware/normalize");
+const RecipeIngredient = require("../../models/RecipeIngredient"); 
 
-router.get("/:id", normalize, async (req, res, next) => {
+router.get("/:id", async (req, res, next) => {
   try {
     const recipe = await Recipe.findOne({ Recipe_ID: req.params.id }).lean();
     if (!recipe) return res.status(404).json({ error: "Not found" });
+
+    const ingredients = await RecipeIngredient.find({ Recipe_ID: req.params.id }).lean();
+    
+    recipe.Ingredients = ingredients;
+
     res.json(recipe);
-  } catch (e) { next(e); }
+  } catch (e) { 
+    next(e); 
+  }
 });
 
 module.exports = router;

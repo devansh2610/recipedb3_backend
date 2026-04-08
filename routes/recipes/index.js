@@ -1,5 +1,9 @@
 const express = require("express");
 const router = express.Router();
+const listsRoute = require('./lists');
+const ingredientInfoRoute = require('./ingredient-info');
+const recipesPerCountryRoute = require('./recipes-per-country');
+const atlasSearchRoute = require('./atlas-search');
 
 router.use("/recipesinfo", require("./recipesinfo"));
 router.use("/recipeofday", require("./recipeofday"));
@@ -30,5 +34,10 @@ router.use("/ingredients/flavor", require("./ingredients-flavor"));
 router.use("/byutensils", require("./byutensils"));
 router.use("/recipes-method", require("./recipes-method"));
 router.use("/recipe-Day-category", require("./recipe-day-category"));
+router.use('/lists', listsRoute);
+router.use('/ingredient-info', ingredientInfoRoute);
+router.use('/recipes-per-country', recipesPerCountryRoute);
+router.use('/atlas-search', atlasSearchRoute);
+
 
 module.exports = router;

@@ -12,33 +12,34 @@ router.get("/", cacheRoute(60_000), async (req, res, next) => {
     const excludeFlavor = (req.query.excludeFlavor || "").split(",").map(s => s.trim()).filter(Boolean);
     const includeDiet   = (req.query.includeDiet   || "").split(",").map(s => s.trim()).filter(Boolean);
     const excludeDiet   = (req.query.excludeDiet   || "").split(",").map(s => s.trim()).filter(Boolean);
-
+    const includeIngredient = (req.query.includeIngredient || "").split(",").map(s => s.trim()).filter(Boolean);
+    const excludeIngredient = (req.query.excludeIngredient || "").split(",").map(s => s.trim()).filter(Boolean);
     const recipeCategory = req.query.category;
     const titleQuery     = (req.query.title || "").toLowerCase().trim();
+    const cuisineQuery   = req.query.cuisine;
 
-    // Iteration 2: Mapped 'Dietrx_Category' -> 'Predicted_Category'
     const incOr = [];
     if (includeFlavor.length) incOr.push({ FlavorDB_Category: { $in: includeFlavor.map(v => new RegExp(v, "i")) } });
     if (includeDiet.length)   incOr.push({ Predicted_Category: { $in: includeDiet.map(v => new RegExp(v, "i")) } });
+    if (includeIngredient.length) incOr.push({ NAME_lc: { $in: includeIngredient.map(v => new RegExp(v, "i")) } });
 
     const excNor = [];
     if (excludeFlavor.length) excNor.push({ FlavorDB_Category: { $in: excludeFlavor.map(v => new RegExp(v, "i")) } });
     if (excludeDiet.length)   excNor.push({ Predicted_Category: { $in: excludeDiet.map(v => new RegExp(v, "i")) } });
+    if (excludeIngredient.length) excNor.push({ NAME_lc: { $in: excludeIngredient.map(v => new RegExp(v, "i")) } });
 
-    // Stage 1: gather candidate Recipe_IDs
     const pipe = [];
     if (incOr.length) pipe.push({ $match: { $or: incOr } });
     pipe.push({ $group: { _id: "$Recipe_ID" } });
 
-    // Stage 2: apply excludes
     if (excNor.length) {
       pipe.push(
         { $lookup: { from: "recipe_ingredients", localField: "_id", foreignField: "Recipe_ID", as: "ings" } },
         { $unwind: "$ings" },
         { $match: { $nor: excNor.map(cond => ({ 
-          // Check nested fields under 'ings'
           ...(cond.FlavorDB_Category ? { "ings.FlavorDB_Category": cond.FlavorDB_Category } : {}),
-          ...(cond.Predicted_Category ? { "ings.Predicted_Category": cond.Predicted_Category } : {})
+          ...(cond.Predicted_Category ? { "ings.Predicted_Category": cond.Predicted_Category } : {}),
+          ...(cond.NAME_lc ? { "ings.NAME_lc": cond.NAME_lc } : {})
         })) } },
         { $group: { _id: "$_id" } }
       );
@@ -46,12 +47,16 @@ router.get("/", cacheRoute(60_000), async (req, res, next) => {
 
     const matches = await RecipeIngredient.aggregate(pipe);
     const ids = matches.map(m => m._id);
-    if (!ids.length) return res.json([]);
+    if (!ids.length && (incOr.length || excNor.length)) return res.json([]); 
 
-    // Stage 3: filter Recipe collection
-    const query = { Recipe_ID: { $in: ids } };
+    const query = {};
+    if (incOr.length || excNor.length) {
+        query.Recipe_ID = { $in: ids };
+    }
+    
     if (recipeCategory) query.Category = new RegExp(recipeCategory, "i");
     if (titleQuery)     query.Recipe_Title_lc = { $regex: titleQuery };
+    if (cuisineQuery)   query.Cuisine = new RegExp(cuisineQuery, "i");
 
     const { skip, limit } = pageParams(req);
     const items = await Recipe.find(query)

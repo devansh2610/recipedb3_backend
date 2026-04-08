@@ -8,10 +8,8 @@ const { pad8 } = require('../utils');
 
 const BATCH_SIZE = 1000;
 const URI = process.env.MONGODB_URI;
-// LIMIT THE DATASET TO FIT IN FREE TIER
-const MAX_RECIPES = 20000;
+const MAX_RECIPES = 20000; // just limiting the dataset to fit in free tier
 
-// UPDATE PATHS HERE
 const GENERAL_CSV = 'D:/RecipeDB3/dataset/Second_Iteration/RecipeDB3_General.csv';
 const NUTRITION_CSV = 'D:/RecipeDB3/dataset/Second_Iteration/RecipeDB3_Nutrition.csv';
 
@@ -43,16 +41,13 @@ async function importGeneral() {
         Source: data.Source,
         Image_ID: pad8(data.Image_ID),
         Image_URL: data.Image_URL,
-        
-        // CHANGED: Parse strings to Integers. Default to 0 if missing.
         Prep_Time: parseInt(data.Prep_Time, 10) || 0,
         Cook_Time: parseInt(data.Cook_Time, 10) || 0,
         Total_Time: parseInt(data.Total_Time, 10) || 0,
-        
         Instructions: data.Instructions,
         Cuisine: data.Cuisine,
         Category: data.Category,
-        Servings: Number(data.Servings) || 0,
+        Servings: parseInt(data.Servings, 10) || 0,
         Ratings: Number(data.Ratings) || 0,
         Ratings_Count: Number(data.Votes) || 0
       });
@@ -74,7 +69,6 @@ async function importGeneral() {
         await Recipe.insertMany(results, { ordered: false }).catch(e => {});
         count += results.length;
       }
-      // Destroy stream to stop reading if we exited early
       stream.destroy();
       console.log(`Finished General Import. Inserted: ${count}`);
       resolve();
@@ -93,7 +87,6 @@ async function importNutrition() {
     fs.createReadStream(NUTRITION_CSV)
       .pipe(csv())
       .on('data', (data) => {
-        // Only update if ID is within our limit
         if (Number(data.Recipe_ID) > MAX_RECIPES) return;
 
         bulkOps.push({

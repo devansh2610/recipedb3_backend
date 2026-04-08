@@ -3,7 +3,7 @@
   "info": {
     "title": "RecipeDB 3.0 API",
     "description": "API Documentation for RecipeDB 3.0 Backend.\n\n## Important Rules\n1. **ID Padding**: All IDs (`Recipe_ID`, `Ing_ID`) are **8-digit zero-padded strings** (Except FlavorDB_ID). \n    * Example: Input `1` is automatically treated as `00000001`.\n2. **Pagination**: Most list endpoints accept a `page` parameter (default: 1). The page size is fixed at **7 items**.\n3. **Images**: Images are returned as URLs. If a recipe has no image, the field may be empty or missing.",
-    "version": "2.0.0",
+    "version": "2.1.0",
     "contact": {
       "name": "RecipeDB Team",
       "email": "bagler@iiitd.ac.in"
@@ -16,6 +16,13 @@
     }
   ],
   "paths": {
+    "/lists": {
+      "get": {
+        "summary": "Get Metadata Lists (Enums)",
+        "description": "**Source File:** `lists.js`\n\n### What it does\nFetches all unique diets, cuisines, categories, flavors, and ingredients from the database.\n\n### When to use\nUse this to populate Dropdown Menus and Sidebar Filters on the frontend.\n\n### Parameters\n* None",
+        "responses": { "200": { "description": "JSON object containing arrays for diets, cuisines, categories, flavors, and ingredients." } }
+      }
+    },
     "/recipesinfo": {
       "get": {
         "summary": "Get All Recipes (Catalog)",
@@ -38,11 +45,11 @@
     "/search-recipe/{id}": {
       "get": {
         "summary": "Get Recipe Details (By ID)",
-        "description": "**Source File:** `search-recipe.js`\n\n### What it does\nFetches the complete details of a single recipe by its ID.\n\n### When to use\nUse this to display the details of a particular recipe, i.e., for the **Recipe Detail Page**.\n\n### Parameters\n* **id** (Mandatory): string (\"00000001\", \"00000550\")",
+        "description": "**Source File:** `search-recipe.js`\n\n### What it does\nFetches the complete details of a single recipe by its ID. **Note:** This now includes a populated `Ingredients` array attached to the recipe object.\n\n### When to use\nUse this to display the details of a particular recipe, i.e., for the **Recipe Detail Page**.\n\n### Parameters\n* **id** (Mandatory): string (\"00000001\", \"00000550\")",
         "parameters": [
           { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "example": "00000001" } }
         ],
-        "responses": { "200": { "description": "Complete recipe object." }, "404": { "description": "Not found." } }
+        "responses": { "200": { "description": "Complete recipe object, including Ingredients array." }, "404": { "description": "Not found." } }
       }
     },
     "/instructions/{id}": {
@@ -92,13 +99,17 @@
     "/by-ingredients-categories-title": {
       "get": {
         "summary": "Mega Filter (Advanced Search)",
-        "description": "**Source File:** `by-ingredients-categories-title.js`\n\n### What it does\nCombines Ingredient, Diet, Flavor, Category, and Title filters.\n\n### When to use\nUse for **Advanced Search**.\n\n### Parameters\n* **includeDiet** (Optional): string (\"Vegetarian\", \"Vegan\")\n* **title** (Optional): string (\"Salad\", \"Curry\")\n* **includeFlavor** (Optional): string (\"Spice\", \"Herb\", \"Fruit\")\n* **excludeFlavor** (Optional): string (\"Bitter\", \"Sour\")\n* **category** (Optional): string (\"Lunch\", \"Breakfast\")",
+        "description": "**Source File:** `by-ingredients-categories-title.js`\n\n### What it does\nCombines Ingredient, Diet, Flavor, Category, Cuisine, and Title filters.\n\n### When to use\nUse for **Advanced Search**.\n\n### Parameters\n* **includeDiet** (Optional): string (\"Vegetarian\", \"Vegan\")\n* **title** (Optional): string (\"Salad\", \"Curry\")\n* **includeFlavor** (Optional): string (\"Spice\", \"Herb\", \"Fruit\")\n* **excludeFlavor** (Optional): string (\"Bitter\", \"Sour\")\n* **category** (Optional): string (\"Lunch\", \"Breakfast\")\n* **includeIngredient** (Optional): string (\"garlic\", \"onion\")\n* **excludeIngredient** (Optional): string (\"beef\")\n* **cuisine** (Optional): string (\"American\")",
         "parameters": [
           { "name": "includeDiet", "in": "query", "schema": { "type": "string", "example": "Vegetarian" } },
           { "name": "title", "in": "query", "schema": { "type": "string", "example": "Salad" } },
           { "name": "includeFlavor", "in": "query", "schema": { "type": "string", "example": "Spice" } },
           { "name": "excludeFlavor", "in": "query", "schema": { "type": "string", "example": "Bitter" } },
-          { "name": "category", "in": "query", "schema": { "type": "string", "example": "Lunch" } }
+          { "name": "category", "in": "query", "schema": { "type": "string", "example": "Lunch" } },
+          { "name": "includeIngredient", "in": "query", "schema": { "type": "string", "example": "garlic" } },
+          { "name": "excludeIngredient", "in": "query", "schema": { "type": "string", "example": "beef" } },
+          { "name": "cuisine", "in": "query", "schema": { "type": "string", "example": "American" } },
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1, "example": 1 } }
         ],
         "responses": { "200": { "description": "List of recipes." } }
       }
@@ -326,6 +337,49 @@
            { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1, "example": 1 } }
         ],
         "responses": { "200": { "description": "List of recipes." } }
+      }
+    },
+  "/ingredient-info/{name}": {
+        "get": {
+          "summary": "Get Full Ingredient Profile",
+          "description": "**Source File:** `ingredient-info.js`\n\n### What it does\nFetches a comprehensive profile for a specific ingredient. Includes its internal `Ing_ID`, Metadata (Flavor/Diet categories), Wikipedia links and images, FlavorDB links, and Usage Statistics (Total recipes).\n\n### When to use\nUse this to populate a rich 'Ingredient Details' page.\n\n### Parameters\n* **name** (Mandatory): string (\"apple\", \"broccoli\", \"garlic\")",
+          "parameters": [
+            { "name": "name", "in": "path", "required": true, "schema": { "type": "string", "example": "garlic" } }
+          ],
+          "responses": { "200": { "description": "Comprehensive Ingredient Profile object." }, "404": { "description": "Ingredient not found." } }
+        }
+      },
+      "/recipes-per-country": {
+      "get": {
+        "summary": "Total Recipes Per Country/Region",
+        "description": "**Source File:** `recipes-per-country.js`\n\n### What it does\nAggregates the database and returns a count of how many recipes belong to each region/cuisine. \n\n**Note on Data:** Because of how the dataset was compiled, a large portion of recipes where a specific geographic cuisine could not be identified are grouped under the `'Other'` category. The `country` key in the response maps directly to these geographic and cultural regions (e.g., 'Indian', 'Asian', 'Other').",
+        "parameters": [],
+        "responses": { 
+          "200": { 
+            "description": "Array of objects containing 'country' (representing the cuisine/region) and 'total_recipes'." 
+          } 
+        }
+      }
+    },
+    "/atlas-search/autocomplete": {
+      "get": {
+        "summary": "Search Autocomplete (Atlas Search)",
+        "description": "**Source File:** `atlas-search.js`\n\n### What it does\nProvides lightning-fast, typo-tolerant autocomplete suggestions for recipe titles using MongoDB Atlas Search (Lucene engine).\n\n### When to use\nIntegrate this directly into the Navbar/Header Search Bar to show a dropdown of 10 quick suggestions as the user types.",
+        "parameters": [
+          { "name": "q", "in": "query", "required": true, "schema": { "type": "string", "example": "chic" } }
+        ],
+        "responses": { "200": { "description": "Array of top 10 lightweight recipe objects (ID, Title, Image)." } }
+      }
+    },
+    "/atlas-search/search": {
+      "get": {
+        "summary": "Full Fuzzy Search (Atlas Search)",
+        "description": "**Source File:** `atlas-search.js`\n\n### What it does\nPerforms a full text search on recipe titles with advanced fuzzy matching (typo tolerance). E.g., searching for 'chikcen' will successfully return 'chicken' recipes.\n\n### When to use\nUse this to power the main Search Results Page when a user hits 'Enter' on their query.",
+        "parameters": [
+          { "name": "q", "in": "query", "required": true, "schema": { "type": "string", "example": "chikcen" } },
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1, "example": 1 } }
+        ],
+        "responses": { "200": { "description": "Paginated array of detailed recipe objects." } }
       }
     }
   }
