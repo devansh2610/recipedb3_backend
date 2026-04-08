@@ -11,11 +11,11 @@ router.get("/", normalize, async (req, res, next) => {
     if (cuisine) query.Cuisine = new RegExp(cuisine, "i");
     if (category) query.Category = new RegExp(category, "i");
 
-    const items = await findPaged(Recipe, query, {
+    const paginatedData = await findPaged(Recipe, query, {
       sort: { Ratings_Count: -1, Ratings: -1 }
     }, req);
 
-    res.json(items);
+    res.json(paginatedData);
   } catch (e) { next(e); }
 });
 
