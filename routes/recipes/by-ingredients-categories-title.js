@@ -19,7 +19,9 @@ router.get("/", cacheRoute(60_000), async (req, res, next) => {
     const titleQuery     = (req.query.title || "").trim();
     const cuisineQuery   = req.query.cuisine;
 
-    // INPUT VALIDATION
+    // ==========================================
+    // 0. INPUT VALIDATION
+    // ==========================================
     const validDiets = ["vegan", "vegetarian", "eggetarian", "pescatarian"];
     for (const d of includeDiet) {
         if (!validDiets.includes(d.toLowerCase())) {
@@ -29,37 +31,49 @@ router.get("/", cacheRoute(60_000), async (req, res, next) => {
         }
     }
 
-    // BUILD EXCLUSIONS (The Strict Blocklist)
+    // ==========================================
+    // 1. BUILD EXCLUSIONS (The Strict Blocklist)
+    // ==========================================
     const excludeConditions = [];
     let forbidCat = [];
     let forbidName = [];
 
-    // Apply utils/diet.js rules for False-Positive prevention
     for (const diet of includeDiet) {
         const rules = patternsForDiet(diet);
         if (rules.forbidCat) forbidCat.push(...rules.forbidCat);
         if (rules.forbidName) forbidName.push(...rules.forbidName);
     }
     
-    // Apply explicit user exclusions to the forbidName array
     if (excludeIngredient.length > 0) {
         forbidName.push(...excludeIngredient.map(v => new RegExp(v, "i")));
     }
 
-    // Push conditions for querying the RecipeIngredients collection
-    if (forbidCat.length > 0) excludeConditions.push({ Predicted_Category: { $in: forbidCat } });
-    if (forbidName.length > 0) excludeConditions.push({ NAME_lc: { $in: forbidName } });
+    // NEW: "Dish" Isolation Strategy
+    // We strictly block the vague Predicted_Category "Dish" so hidden meats don't sneak in.
+    // However, we DO NOT push "Dish" to forbidCat, preserving safe Recipe Titles (e.g., "Side Dish").
+    let ingredientOnlyForbiddenCats = [...forbidCat];
+    if (includeDiet.length > 0) {
+        ingredientOnlyForbiddenCats.push(new RegExp("^dish$", "i"));
+    }
+
+    if (ingredientOnlyForbiddenCats.length > 0) {
+        excludeConditions.push({ Predicted_Category: { $in: ingredientOnlyForbiddenCats } });
+    }
+    if (forbidName.length > 0) {
+        excludeConditions.push({ NAME_lc: { $in: forbidName } });
+    }
     if (excludeFlavor.length > 0) {
         excludeConditions.push({ FlavorDB_Category: { $in: excludeFlavor.map(v => new RegExp(v, "i")) } });
     }
 
     let forbiddenRecipeIds = [];
     if (excludeConditions.length > 0) {
-        // Find ALL recipe IDs that contain AT LEAST ONE forbidden ingredient/category
         forbiddenRecipeIds = await RecipeIngredient.distinct("Recipe_ID", { $or: excludeConditions });
     }
 
-    // BUILD INCLUSIONS (The Require List)
+    // ==========================================
+    // 2. BUILD INCLUSIONS (The Require List)
+    // ==========================================
     let requiredRecipeIds = null; 
 
     async function intersectIds(query) {
@@ -83,23 +97,22 @@ router.get("/", cacheRoute(60_000), async (req, res, next) => {
         return res.json([]); 
     }
 
-    // FINAL RECIPE QUERY
+    // ==========================================
+    // 3. FINAL RECIPE QUERY
+    // ==========================================
     const query = {};
 
-    // Apply the ID filters
     if (forbiddenRecipeIds.length > 0 || requiredRecipeIds !== null) {
         query.Recipe_ID = {};
         if (requiredRecipeIds !== null) query.Recipe_ID.$in = requiredRecipeIds;
         if (forbiddenRecipeIds.length > 0) query.Recipe_ID.$nin = forbiddenRecipeIds;
     }
 
-    // Apply the direct string filters
     if (recipeCategory) query.Category = new RegExp(recipeCategory, "i");
     if (titleQuery)     query.Recipe_Title = new RegExp(titleQuery, "i");
     if (cuisineQuery)   query.Cuisine = new RegExp(cuisineQuery, "i");
 
-    // Comprehensive Title and Category Block Strategy
-    // Combines BOTH explicit names (e.g., "beef") and categories (e.g., "meat")
+    // Use the original forbidCat here (without "Dish") to prevent blocking safe titles!
     const allForbiddenRegexes = [...forbidName, ...forbidCat];
     if (allForbiddenRegexes.length > 0) {
         if (!query.$and) query.$and = [];

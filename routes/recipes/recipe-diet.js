@@ -16,25 +16,36 @@ router.get("/", cacheRoute(60_000), async (req, res, next) => {
 
     // 1. Check Ingredients (Predicted_Category and NAME_lc)
     const orConds = [];
-    if (forbidCat.length > 0) orConds.push({ Predicted_Category: { $in: forbidCat } });
-    if (forbidName.length > 0) orConds.push({ NAME_lc: { $in: forbidName } });
+    
+    // NEW: "Dish" Isolation Strategy
+    // Combines the diet's forbidden categories WITH "Dish" specifically for ingredient scanning.
+    const ingredientOnlyForbiddenCats = [...forbidCat, new RegExp("^dish$", "i")];
+    
+    if (ingredientOnlyForbiddenCats.length > 0) {
+        orConds.push({ Predicted_Category: { $in: ingredientOnlyForbiddenCats } });
+    }
+    if (forbidName.length > 0) {
+        orConds.push({ NAME_lc: { $in: forbidName } });
+    }
 
-    // Get IDs of recipes with bad ingredients
     const badIngredientRecipes = await RecipeIngredient.aggregate([
       { $match: { $or: orConds } },
       { $group: { _id: "$Recipe_ID" } }
     ]);
     
     // 2. Check Recipe Title AND Category
-    // Combine ALL forbidden words and categories to rigorously scan the recipe metadata
+    // We use the original forbidCat here (without "Dish") to prevent blocking safe metadata!
     const allForbiddenRegexes = [...forbidName, ...forbidCat];
     
-    const badRecipeMeta = await Recipe.find({
-      $or: [
-        { Recipe_Title: { $in: allForbiddenRegexes } },
-        { Category: { $in: allForbiddenRegexes } }
-      ]
-    }).select("Recipe_ID").lean();
+    let badRecipeMeta = [];
+    if (allForbiddenRegexes.length > 0) {
+        badRecipeMeta = await Recipe.find({
+          $or: [
+            { Recipe_Title: { $in: allForbiddenRegexes } },
+            { Category: { $in: allForbiddenRegexes } }
+          ]
+        }).select("Recipe_ID").lean();
+    }
 
     // 3. Combine and Exclude
     const forbiddenSet = new Set([
